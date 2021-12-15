@@ -297,6 +297,30 @@ let missing_translation lexicon languages =
   | None -> ()
 in
 
+let extract_translation lexicon lang =
+  match try Some (open_in lexicon) with Sys_error _ -> None with
+  | Some ic ->
+    (try
+      while true do
+        let msg = skip_to_next_message ic in
+        let list = get_all_versions ic in
+        let rec loop = function
+          | [] -> None
+          | (l, t) :: list ->
+              if l = lang then Some (l, t) (* stop at first occurrence *)
+              else loop list
+        in
+        begin match loop list with
+          | None -> ()
+          | Some (l, t) ->
+              print_endline msg;
+              print_string l ^ ": " ^ t ^ "\n\n"
+        end
+      done
+    with End_of_file -> ());
+    close_in ic
+  | None -> ()
+in
 
 (**/**) (* Sorting. *)
 
@@ -372,6 +396,7 @@ let lang_default =
   ; "he"
   ; "is"
   ; "it"
+  ; "lt"
   ; "lv"
   ; "nl"
   ; "no"
@@ -394,6 +419,8 @@ let lang = ref lang_default in
 let lexicon = ref "" in
 let lex_sort = ref false in
 let missing = ref false in
+
+let extract = ref false in
 let orphans = ref false in
 let repo = ref "" in
 let log = ref false in
@@ -401,6 +428,9 @@ let log = ref false in
 let speclist =
   [ ("-missing", Arg.Set missing
     ," Print missing translation for these lang: " ^ String.concat "," lang_default ^".")
+
+  ; ("-extract", Arg.String (fun s -> extract := true ; lang := s)
+    ," Extract translation for this lang: " ^ lang)
   ; ("-missing-lang", Arg.String (fun s -> missing := true ; lang := String.split_on_char ',' s)
     ," Same as -missing, but use a comma-separated list of lang instead of the default one.")
   ; ("-repo", Arg.String (fun x -> repo := x)
@@ -425,6 +455,7 @@ let main () =
   if !orphans && !repo = "" then (Arg.usage speclist usage; exit 2);
   if !lex_sort then sort_lexicon !lexicon
   else if !missing then missing_translation !lexicon !lang
+  else if !extract then extract_translation !lexicon !lang
   else if !orphans then missing_or_unused_msg !lexicon !repo !log
 in
 
