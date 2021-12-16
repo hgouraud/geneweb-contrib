@@ -3,9 +3,7 @@
    [ GWREPL_NOPROMPT=1 ] gwrepl.exe [script_arg1] ...
 *)
 
-<<<<<<< e77925fe970208982968c92633455af977e60ccd
 (**/**) (* Utils. *)
-=======
 let ls_r dirs =
   let rec loop result = function
     | f :: fs when Sys.is_directory f ->
@@ -52,11 +50,8 @@ in
 let get_all_versions ic =
   let rec loop accu =
     let line = try input_line ic with End_of_file -> "" in
-<<<<<<< e77925fe970208982968c92633455af977e60ccd
-=======
     let line = strip '\n' line in
     let line = strip '\r' line in
->>>>>>> New extract and check functions on lexicon
     if line = "" then accu
     else
       try
@@ -87,11 +82,11 @@ let get_lexicon_msg lexicon =
   match try Some (open_in lexicon) with Sys_error _ -> None with
   | Some ic ->
     (try
-       while true do
-         let msg = skip_to_next_message ic in
-         lex := msg :: !lex
-       done
-     with End_of_file -> ());
+      while true do
+       let msg = skip_to_next_message ic in
+       lex := msg :: !lex
+      done
+    with End_of_file -> ());
     close_in ic;
     List.rev_map (fun w -> String.sub w 4 (String.length w - 4)) !lex
   | None -> !lex
@@ -127,23 +122,23 @@ let get_msg_src repo =
   let _ = "\"" in (* just for quotes balancing in BBedit. Putting it in comment fails!! *)
   List.iter
     (fun src ->
-       match try Some (open_in src) with Sys_error _ -> None with
-       | Some ic ->
-         (try
-            while true do
-              let line = input_line ic in
-              let has_msg =
-                try
-                  ignore (Str.search_forward regexp line 0);
-                  true
-                with Not_found -> false
-              in
-              if has_msg then msg := line :: !msg
-              else ()
-            done
-          with End_of_file -> ());
-         close_in ic;
-       | None -> ())
+      match try Some (open_in src) with Sys_error _ -> None with
+      | Some ic ->
+        (try
+          while true do
+            let line = input_line ic in
+            let has_msg =
+              try
+                ignore (Str.search_forward regexp line 0);
+                true
+              with Not_found -> false
+            in
+            if has_msg then msg := line :: !msg
+            else ()
+          done
+        with End_of_file -> ());
+        close_in ic;
+      | None -> ())
     (get_ml_files repo);
   List.fold_left
     (fun accu msg -> List.rev_append (cut_all_msg_src msg) accu)
@@ -198,23 +193,23 @@ let get_msg_tpl repo =
   let regexp = Str.regexp "[*?[a-z]+]" in
   List.iter
     (fun tpl ->
-       match try Some (open_in tpl) with Sys_error _ -> None with
-       | Some ic ->
-         (try
-            while true do
-              let line = input_line ic in
-              let has_msg =
-                try
-                  ignore (Str.search_forward regexp line 0);
-                  true
-                with Not_found -> false
-              in
-              if has_msg then msg := line :: !msg
-              else ()
-            done
-          with End_of_file -> ());
-         close_in ic;
-       | None -> ())
+      match try Some (open_in tpl) with Sys_error _ -> None with
+      | Some ic ->
+        (try
+          while true do
+            let line = input_line ic in
+            let has_msg =
+              try
+                ignore (Str.search_forward regexp line 0);
+                true
+              with Not_found -> false
+            in
+            if has_msg then msg := line :: !msg
+            else ()
+          done
+        with End_of_file -> ());
+        close_in ic;
+      | None -> ())
     (get_tpl_files repo);
   List.fold_left
     (fun accu msg -> List.rev_append (cut_all_msg msg) accu)
@@ -222,10 +217,10 @@ let get_msg_tpl repo =
 in
 
 let module StringSet = Set.Make
-    (struct
-      type t = string
-      let compare = Stdlib.compare
-    end)
+  (struct
+    type t = string
+    let compare = Stdlib.compare
+  end)
 in
 
 let sort_uniq cmp l =
@@ -265,7 +260,6 @@ let missing_or_unused_msg lexicon repo log =
            (String.lowercase_ascii x) (String.lowercase_ascii y))
       (List.rev_append msg_src msg_tpl)
   in
-
   if log then begin
     (match try Some (open_out "log_lex") with Sys_error _ -> None with
        | Some oc ->
@@ -305,8 +299,8 @@ in
 let missing_languages list languages =
   List.fold_left
     (fun accu lang ->
-       if not (List.mem_assoc lang list) then (lang :: accu)
-       else accu)
+      if not (List.mem_assoc lang list) then (lang :: accu)
+      else accu)
     [] languages
 in
 
@@ -321,20 +315,20 @@ let missing_translation lexicon languages =
   match try Some (open_in lexicon) with Sys_error _ -> None with
   | Some ic ->
     (try
-       while true do
-         let msg = skip_to_next_message ic in
-         let list = get_all_versions ic in
-         let list' = missing_languages list languages in
-         if list' <> [] then
-           begin
-             print_endline msg;
-             print_transl_en_fr list;
-             List.iter
-               (fun lang -> print_endline (lang ^ ":")) (List.rev list');
-             print_string "\n"
-           end
-       done
-     with End_of_file -> ());
+      while true do
+       let msg = skip_to_next_message ic in
+       let list = get_all_versions ic in
+       let list' = missing_languages list languages in
+       if list' <> [] then
+         begin
+           print_endline msg;
+           print_transl_en_fr list;
+           List.iter
+             (fun lang -> print_endline (lang ^ ":")) (List.rev list');
+           print_string "\n"
+         end
+      done
+    with End_of_file -> ());
     close_in ic
   | None -> ()
 in
@@ -343,23 +337,23 @@ let extract_translation lexicon lang =
   match try Some (open_in lexicon) with Sys_error _ -> None with
   | Some ic ->
     (try
-       while true do
-         let msg = skip_to_next_message ic in
-         let list = get_all_versions ic in
-         let rec loop = function
-           | [] -> None
-           | (l, t) :: list -> if l = lang then Some (l, t) else loop list
-         in
-         begin match loop list with
-         | None -> ()
-         | Some (l, t) ->
-             print_endline msg;
-             print_endline (l ^ ":" ^ t);
-             print_string ("\n");
-             flush stdout;
-         end
-       done
-     with End_of_file -> ());
+      while true do
+       let msg = skip_to_next_message ic in
+       let list = get_all_versions ic in
+       let rec loop = function
+         | [] -> None
+         | (l, t) :: list -> if l = lang then Some (l, t) else loop list
+       in
+       begin match loop list with
+       | None -> ()
+       | Some (l, t) ->
+           print_endline msg;
+           print_endline (l ^ ":" ^ t);
+           print_string ("\n");
+           flush stdout;
+       end
+      done
+    with End_of_file -> ());
     close_in ic
   | None -> ()
 in
@@ -367,11 +361,11 @@ in
 (**/**) (* Sorting. *)
 
 let module Lex_map = Map.Make
-    (struct
-      type t = string
-      let compare x y =
-        compare (String.lowercase_ascii x) (String.lowercase_ascii y)
-    end)
+  (struct
+    type t = string
+    let compare x y =
+      compare (String.lowercase_ascii x) (String.lowercase_ascii y)
+  end)
 in
 
 let merge = ref false in
@@ -380,34 +374,34 @@ let first = ref false in
 let sort_lexicon lexicon =
   let lex_sort = ref Lex_map.empty in
   (match try Some (open_in lexicon) with Sys_error _ -> None with
-     | Some ic ->
-       (try
-          while true do
-            let msg = skip_to_next_message ic in
-            let list = get_all_versions ic in
-            let list' = List.sort (fun (x, _) (y, _) -> compare x y) list in
-            let list' = if !merge then match Lex_map.find_opt msg !lex_sort with
-                | Some list ->
-                  (* merge list and list' *)
-                  let list' =
-                    let rec loop accu list =
-                      match list with
-                      | [] -> accu
-                      | (k, v):: list -> loop ((k, v) :: accu) list
-                    in loop list' list
-                  in
-                  if !first then
-                    List.sort_uniq (fun (x, _) (y, _) -> compare x y) list'
-                  else
-                    List.sort_uniq (fun (x, _) (y, _) -> compare x y) (List.rev list')
-                | None -> list'
-              else list'
-            in
-            lex_sort := Lex_map.add msg list' !lex_sort
-          done
-        with End_of_file -> ());
-       close_in ic
-     | None -> ());
+  | Some ic ->
+   (try
+      while true do
+        let msg = skip_to_next_message ic in
+        let list = get_all_versions ic in
+        let list' = List.sort (fun (x, _) (y, _) -> compare x y) list in
+        let list' = if !merge then match Lex_map.find_opt msg !lex_sort with
+            | Some list ->
+              (* merge list and list' *)
+              let list' =
+                let rec loop accu list =
+                  match list with
+                  | [] -> accu
+                  | (k, v):: list -> loop ((k, v) :: accu) list
+                in loop list' list
+              in
+              if !first then
+                List.sort_uniq (fun (x, _) (y, _) -> compare x y) list'
+              else
+                List.sort_uniq (fun (x, _) (y, _) -> compare x y) (List.rev list')
+            | None -> list'
+          else list'
+        in
+        lex_sort := Lex_map.add msg list' !lex_sort
+      done
+    with End_of_file -> ());
+    close_in ic
+  | None -> ());
   Lex_map.iter
     (fun msg list ->
        print_endline msg;
