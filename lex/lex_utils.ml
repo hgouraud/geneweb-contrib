@@ -338,20 +338,16 @@ let extract_translation lexicon lang =
   | Some ic ->
     (try
       while true do
-       let msg = skip_to_next_message ic in
-       let list = get_all_versions ic in
-       let rec loop = function
-         | [] -> None
-         | (l, t) :: list -> if l = lang then Some (l, t) else loop list
-       in
-       begin match loop list with
-       | None -> ()
-       | Some (l, t) ->
-           print_endline msg;
-           print_endline (l ^ ":" ^ t);
-           print_string ("\n");
-           flush stdout;
-       end
+        let msg = skip_to_next_message ic in
+        let list = get_all_versions ic in
+        let list' = List.fold_left (fun acc (l, t) ->
+            if (List.mem l lang) then (l, t) :: acc else acc) [] list
+        in
+        if list' <> [] then begin
+          print_endline msg;
+          List.iter (fun (l, t) -> print_endline (l ^ ":" ^ t)) list';
+          print_string "\n"
+        end
       done
     with End_of_file -> ());
     close_in ic
@@ -508,7 +504,7 @@ let lang_default =
 in
 
 let lang = ref lang_default in
-let one_lang = ref "" in
+let one_lang = ref [""] in
 
 let lexicon = ref "" in
 let lex2 = ref "" in
@@ -524,8 +520,8 @@ let log = ref false in
 let speclist =
   [ ("-missing", Arg.Set missing
     ," Print missing translation for these lang: " ^ String.concat "," lang_default ^ ".")
-  ; ("-extract", Arg.String (fun s -> extract := true ; one_lang := s)
-    ," Extract translations for one language.")
+  ; ("-extract", Arg.String (fun s -> extract := true ; one_lang := String.split_on_char ',' s)
+    ," Extract translations for one (or more) language.")
   ; ("-missing-lang", Arg.String (fun s -> missing := true ; lang := String.split_on_char ',' s)
     ," Same as -missing, but use a comma-separated list of lang instead of the default one.")
   ; ("-repo", Arg.String (fun x -> repo := x)
