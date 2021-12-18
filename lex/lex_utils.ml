@@ -416,13 +416,34 @@ let sort_lexicon lexicon =
     with End_of_file -> ());
     close_in ic
   | None -> ());
+  (* handle aliases:
+      aaaa
+  en: aaaa-en
+  fr: aaaa-fr
+  
+      cccc
+  ->: aaaa
+  Should stay next to each other
+  *)
+  let lex_sort_2 = ref Lex_map.empty in
   Lex_map.iter
     (fun msg list ->
-       print_endline msg;
-       List.iter
-         (fun (lang, transl) -> print_endline (lang ^ ":" ^ transl)) list;
-       print_string "\n")
-    !lex_sort
+      let (l, t) = List.hd list in
+      let msg = if l = "->" then "   " ^ t ^ "|" ^ msg else msg in
+      lex_sort_2 := Lex_map.add msg list !lex_sort_2
+    ) !lex_sort;
+  Lex_map.iter
+    (fun msg list ->
+      let msg = 
+        try let i = String.index msg '|' in
+        String.sub msg (i+1) (String.length msg - i - 1)
+        with Not_found -> msg
+      in
+      print_endline msg;
+      List.iter
+        (fun (lang, transl) -> print_endline (lang ^ ":" ^ transl)) list;
+      print_string "\n"
+    ) !lex_sort_2
 in
 
 let check_lexicon lexicon lexicon_2 merge =
