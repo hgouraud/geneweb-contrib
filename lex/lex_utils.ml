@@ -19,24 +19,13 @@ let ls_r dirs =
 
 let only = ref false in
 
-let strip c str =
-  let start =
-    let rec loop i =
-      if i = String.length str then i
-      else if str.[i] = c then loop (i + 1)
-      else i
-    in
-    loop 0
+let strip c s =
+  let rec copy i len =
+    if i = String.length s then Buff.get len
+    else if s.[i] = c then copy (i + 1) len
+    else copy (i + 1) (Buff.store len s.[i])
   in
-  let stop =
-    let rec loop i =
-      if i = -1 then i + 1 else if str.[i] = c then loop (i - 1) else i + 1
-    in
-    loop (String.length str - 1)
-  in
-  if start = 0 && stop = String.length str then str
-  else if start >= stop then ""
-  else String.sub str start (stop - start)
+  copy 0 0
 in
 >>>>>>> New extract and check functions on lexicon
 
@@ -117,7 +106,12 @@ let cut_all_msg_src s =
         in
         loop (start + 1)
       in
-      list := String.sub s (start + 1) (stop - start - 1) :: !list;
+      let msg = String.sub s (start + 1) (stop - start - 1) in
+      let msg = 
+        try let _i = String.index msg '\\' in strip '\\' msg
+        with Not_found -> msg
+      in
+      list := msg :: !list;
       i := stop + 1
     done;
     !list
@@ -128,12 +122,11 @@ let get_msg_src repo =
   let msg = ref [] in
   (* TODO the current setup misses translations with the string on the next line !! *)
   let regexp = Str.regexp "transl.* \"" in
-  let _ = "\"" in (* just for quotes balancing in BBedit. Putting it in comment fails!! *)
-  List.iter
-    (fun src ->
+  List.iter (fun repo ->
+    List.iter (fun src ->
       match try Some (open_in src) with Sys_error _ -> None with
       | Some ic ->
-        (try
+       (try
           while true do
             let line = input_line ic in
             let has_msg =
@@ -146,9 +139,10 @@ let get_msg_src repo =
             else ()
           done
         with End_of_file -> ());
-        close_in ic;
+       close_in ic;
       | None -> ())
-    (get_ml_files repo);
+    (get_ml_files repo)
+  ) repo;
   List.fold_left
     (fun accu msg -> List.rev_append (cut_all_msg_src msg) accu)
     [] !msg
@@ -200,11 +194,11 @@ in
 let get_msg_tpl repo =
   let msg = ref [] in
   let regexp = Str.regexp "[*?[a-z]+]" in
-  List.iter
-    (fun tpl ->
+  List.iter (fun repo ->
+    List.iter (fun tpl ->
       match try Some (open_in tpl) with Sys_error _ -> None with
       | Some ic ->
-        (try
+       (try
           while true do
             let line = input_line ic in
             let has_msg =
@@ -217,9 +211,10 @@ let get_msg_tpl repo =
             else ()
           done
         with End_of_file -> ());
-        close_in ic;
+       close_in ic;
       | None -> ())
-    (get_tpl_files repo);
+    (get_tpl_files repo)
+  ) repo;
   List.fold_left
     (fun accu msg -> List.rev_append (cut_all_msg msg) accu)
     [] !msg
@@ -274,9 +269,8 @@ let missing_or_unused_msg lexicon repo log =
       in loop lex lex_files
   in
   (* TODO, scan plugin area as well *)
-  let lex = get_lexicon_msg lexicon in
-  let msg_src = get_msg_src repo in
-  let msg_tpl = get_msg_tpl repo_tpl in
+  let msg_src = get_msg_src [repo_lib; repo_bin; repo_plugins] in
+  let msg_tpl = get_msg_tpl [repo_tpl; repo_plugins] in
   let msg =
     sort_uniq
       (fun x y ->
