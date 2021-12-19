@@ -3,21 +3,10 @@
    [ GWREPL_NOPROMPT=1 ] gwrepl.exe [script_arg1] ...
 *)
 
-(**/**) (* Utils. *)
-let ls_r dirs =
-  let rec loop result = function
-    | f :: fs when Sys.is_directory f ->
-      Sys.readdir f
-      |> Array.to_list
-      |> List.rev_map (Filename.concat f)
-      |> List.rev_append fs
-      |> loop (f :: result)
-    | f :: fs -> loop (f :: result) fs
-    | [] -> result
-  in
-  loop [] dirs
 
 let only = ref false in
+
+(* Name *)
 
 let strip c s =
   let rec copy i len =
@@ -27,7 +16,6 @@ let strip c s =
   in
   copy 0 0
 in
->>>>>>> New extract and check functions on lexicon
 
 let skip_to_next_message ic =
   let rec loop () =
@@ -55,7 +43,7 @@ let get_all_versions ic =
 in
 
 
-(**/**) (* Missing or unused translation. *)
+(* Missing or unused translation. *)
 
 let get_ml_files repo =
   Mutil.ls_r [repo]
@@ -126,7 +114,7 @@ let get_msg_src repo =
     List.iter (fun src ->
       match try Some (open_in src) with Sys_error _ -> None with
       | Some ic ->
-       (try
+        (try
           while true do
             let line = input_line ic in
             let has_msg =
@@ -139,7 +127,7 @@ let get_msg_src repo =
             else ()
           done
         with End_of_file -> ());
-       close_in ic;
+        close_in ic;
       | None -> ())
     (get_ml_files repo)
   ) repo;
@@ -198,7 +186,7 @@ let get_msg_tpl repo =
     List.iter (fun tpl ->
       match try Some (open_in tpl) with Sys_error _ -> None with
       | Some ic ->
-       (try
+        (try
           while true do
             let line = input_line ic in
             let has_msg =
@@ -211,7 +199,7 @@ let get_msg_tpl repo =
             else ()
           done
         with End_of_file -> ());
-       close_in ic;
+        close_in ic;
       | None -> ())
     (get_tpl_files repo)
   ) repo;
@@ -274,21 +262,20 @@ let missing_or_unused_msg lexicon repo log =
   let msg =
     sort_uniq
       (fun x y ->
-         Stdlib.compare
-           (String.lowercase_ascii x) (String.lowercase_ascii y))
-      (List.rev_append msg_src msg_tpl)
+        Stdlib.compare (String.lowercase_ascii x) (String.lowercase_ascii y))
+        (List.rev_append msg_src msg_tpl)
   in
   if log then begin
     (match try Some (open_out "log_lex") with Sys_error _ -> None with
-       | Some oc ->
-         List.iter (fun w -> Printf.fprintf oc "%s\n" w) lex;
-         close_out oc
-       | None -> ());
+      | Some oc ->
+        List.iter (fun w -> Printf.fprintf oc "%s\n" w) lex;
+        close_out oc
+      | None -> ());
     (match try Some (open_out "log_msg") with Sys_error _ -> None with
-       | Some oc ->
-         List.iter (fun w -> Printf.fprintf oc "%s\n" w) msg;
-         close_out oc
-       | None -> ());
+      | Some oc ->
+        List.iter (fun w -> Printf.fprintf oc "%s\n" w) msg;
+        close_out oc
+      | None -> ());
     print_endline
       "View log_lex for lexicon msg and log_msg for src and tpl msg."
   end
@@ -297,22 +284,16 @@ let missing_or_unused_msg lexicon repo log =
       "\nMessage not used anymore in %s and %s :\n" repo_lib repo_tpl;
     flush stdout;
     List.iter
-      (fun w ->
-         if List.mem w msg then ()
-         else print_endline w)
-      lex;
+      (fun w -> if List.mem w msg then () else print_endline w) lex;
     Printf.fprintf stdout
       "\nMessage from %s and %s not in lexicon :\n" repo_lib repo_tpl;
     flush stdout;
     List.iter
-      (fun w ->
-         if List.mem w lex then ()
-         else print_endline w)
-      msg
+      (fun w -> if List.mem w lex then () else print_endline w) msg
   end
 in
 
-(**/**) (* Missing translation. *)
+(* Missing translation. *)
 
 let missing_languages list languages =
   List.fold_left
@@ -372,7 +353,7 @@ let extract_translation lexicon lang =
   | None -> ()
 in
 
-(**/**) (* Sorting. *)
+(* Sorting. *)
 
 let module Lex_map = Map.Make
   (struct
@@ -394,7 +375,9 @@ let sort_lexicon lexicon =
         let msg = skip_to_next_message ic in
         let list = get_all_versions ic in
         let list' = List.sort (fun (x, _) (y, _) -> compare x y) list in
-        let list' = if !merge then match Lex_map.find_opt msg !lex_sort with
+        let list' =
+          if !merge then
+            match Lex_map.find_opt msg !lex_sort with
             | Some list ->
               (* merge list and list' *)
               let list' =
@@ -449,42 +432,42 @@ in
 let check_lexicon lexicon lexicon_2 merge =
   let lex_sort0 = ref Lex_map.empty in
   begin match try Some (open_in lexicon) with Sys_error _ -> None with
-    | Some ic ->
-      (try
-        while true do
-          let msg = skip_to_next_message ic in
-          let list = get_all_versions ic in
-          let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
-          lex_sort0 := Lex_map.add msg list !lex_sort0
-        done
-      with End_of_file -> ());
-      close_in ic
-    | None -> ()
+  | Some ic ->
+    (try
+      while true do
+        let msg = skip_to_next_message ic in
+        let list = get_all_versions ic in
+        let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
+        lex_sort0 := Lex_map.add msg list !lex_sort0
+      done
+    with End_of_file -> ());
+    close_in ic
+  | None -> ()
   end;
   (* Lex_map.iter (fun k t -> print_endline ("Old entry: " ^ k)) !lex_sort0; *)
   let lex_sort1 = ref Lex_map.empty in
   let cnt = ref 0 in
   begin match try Some (open_in lexicon_2) with Sys_error _ -> None with
-    | Some ic ->
-      (try
-        while true do
-          let msg = skip_to_next_message ic in
-          let list = get_all_versions ic in
-          let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
-          lex_sort1 := Lex_map.add msg list !lex_sort1;
-          if merge then
-            if Lex_map.mem msg !lex_sort0 then
-              let list0 = Lex_map.find msg !lex_sort0 in
-              let list = List.append list0 list in
-              let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
-              lex_sort0 := Lex_map.add msg list !lex_sort0
-            else ()
-          else if not (Lex_map.mem msg !lex_sort0) then
-            (print_endline ("New entry: " ^ msg); incr cnt;)
-        done
-      with End_of_file -> ());
-      close_in ic
-    | None -> ()
+  | Some ic ->
+    (try
+      while true do
+        let msg = skip_to_next_message ic in
+        let list = get_all_versions ic in
+        let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
+        lex_sort1 := Lex_map.add msg list !lex_sort1;
+        if merge then
+          if Lex_map.mem msg !lex_sort0 then
+            let list0 = Lex_map.find msg !lex_sort0 in
+            let list = List.append list0 list in
+            let list = List.sort_uniq (fun (x, _) (y, _) -> compare x y) list in
+            lex_sort0 := Lex_map.add msg list !lex_sort0
+          else ()
+        else if not (Lex_map.mem msg !lex_sort0) then
+          (print_endline ("New entry: " ^ msg); incr cnt;)
+      done
+    with End_of_file -> ());
+    close_in ic
+  | None -> ()
   end;
   if merge then
     Lex_map.iter
@@ -504,7 +487,7 @@ let check_lexicon lexicon lexicon_2 merge =
     end
 in
 
-(**/**) (* Main. *)
+(* Main. *)
 
 let lang_default =
   [ "af"; "bg"; "br"; "ca"; "co"; "cs"; "da"; "de"; "en"; "eo"
@@ -565,4 +548,6 @@ let main () =
   else if !orphans then missing_or_unused_msg !lexicon !repo !log
 in
 
-Printexc.print main () ;;
+Printexc.print main (); flush stdout
+;;
+
